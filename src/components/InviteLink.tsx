@@ -7,7 +7,8 @@ export default function InviteLink({ roomId }: { roomId: string }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    setUrl(`${window.location.origin}/room/${roomId}`);
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+    setUrl(`${window.location.origin}${basePath}/room/?id=${roomId}`);
   }, [roomId]);
 
   async function copy() {

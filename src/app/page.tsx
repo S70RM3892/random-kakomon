@@ -58,7 +58,7 @@ export default function TopPage() {
       if (hostError) throw hostError;
 
       setMemberId(room.id, member.id);
-      router.push(`/room/${room.id}`);
+      router.push(`/room/?id=${room.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setBusy(false);

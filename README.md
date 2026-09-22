@@ -9,9 +9,14 @@
 
 ## 構成
 
-- Next.js 15（App Router）+ TypeScript
+- Next.js 15（App Router）+ TypeScript、静的書き出し（`output: "export"`）
 - Supabase（Postgres + Realtime）
-- デプロイは Vercel を想定（main へのマージで自動デプロイ）
+- GitHub Pages に自動デプロイ（main への push で `.github/workflows/deploy.yml` が走る）
+
+公開URL: <https://s70rm3892.github.io/random-kakomon/>
+
+静的ホスティングなのでサーバー側のルーティングが無い。ルームIDはパスではなくクエリで渡す
+（招待リンクは `.../room/?id=<uuid>`）。
 
 抽選の乱数はブラウザではなく Postgres の関数 `draw_exam_set` が1回だけ引き、
 結果を `draws` に保存する。各端末は Realtime で保存済みの結果を受け取るだけなので、
@@ -30,7 +35,7 @@
    cp .env.example .env.local
    ```
 
-   キーはここと Vercel の環境変数だけに置く。リポジトリには絶対にコミットしない。
+   `.env.local` は `.gitignore` 済み。キーをリポジトリのファイルに書かない。
 
 4. 過去問マスタを流し込む（`src/data/catalog.ts` の内容が入る）
 
@@ -44,6 +49,31 @@
    ```
    npm run dev
    ```
+
+## 公開（GitHub Pages）
+
+リポジトリの Settings > Secrets and variables > Actions > Variables に2つ入れる。
+
+| 名前 | 値 |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase の Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase の anon public キー |
+
+入れたら main に push するだけでビルドとデプロイが走る。Settings > Pages の Source が
+「GitHub Actions」になっていない場合はワークフローが自動で有効化を試みる。失敗したら手で切り替える。
+
+anon キーはブラウザに配られる前提の値で、秘密にはできない（どのホスティングでも同じ）。
+アクセス制御は RLS 側でやる。`service_role` キーは絶対にここに入れない。
+
+### 承知のうえの割り切り
+
+ログインを入れていないので、RLS は「anon がルーム・メンバー・結果を読み書きできる」
+という粒度にしてある。公開URLとanonキーが揃えば、第三者が他人のルームの表示名と自己採点を
+読める。入るのがニックネームと自己採点の点数だけなので、この規模では割り切る。
+本名や他人に見せたくない情報は入れない。
+
+抽選の公平性とタイマーだけは、この割り切りの外に置いてある（`draws` への直接 INSERT は
+RLS で禁止し、`draw_exam_set` 関数以外から書けない）。
 
 ## 使い方
 
@@ -71,5 +101,5 @@
 ## 自分でやる作業
 
 - [ ] Supabase のプロジェクト作成とキー発行
-- [ ] キーを Vercel の環境変数に入れる
+- [ ] キーを GitHub の Actions Variables に入れる
 - [ ] 京大工学部の ExamSet を公式資料と再照合（`src/data/catalog.ts` のコメントに根拠を書いてある）
