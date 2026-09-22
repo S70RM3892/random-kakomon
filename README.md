@@ -27,7 +27,7 @@
 
 ## セットアップ
 
-1. Supabase でプロジェクトを作る
+1. Supabase でプロジェクトを作る（[ダッシュボード](https://supabase.com/dashboard) > New project）
 2. SQL Editor で `supabase/migrations/` の SQL を番号順に実行する（`0001_init.sql` → `0002_history.sql`）。何度貼り直しても壊れないようにしてある
 3. `.env.example` をコピーして `.env.local` を作り、キーを入れる
 
@@ -57,7 +57,7 @@
 | 名前 | 値 |
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase の Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase の公開用キー（`sb_publishable_...`。古いプロジェクトは `eyJ...` の anon キー）|
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase の公開用キー（`sb_publishable_...`。古いプロジェクトは `eyJ...` の anon キー）。`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` という名前でも読む |
 
 入れたら main に push するだけでビルドとデプロイが走る。Settings > Pages の Source が
 「GitHub Actions」になっていない場合はワークフローが自動で有効化を試みる。失敗したら手で切り替える。

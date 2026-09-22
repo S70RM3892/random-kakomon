@@ -31,7 +31,13 @@ function normalizeKey(raw: string | undefined): string | null {
 }
 
 const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Supabase の Connect ダイアログは Next.js 向けに PUBLISHABLE_KEY という名前で出す。
+// どちらの名前で登録してもそのまま動くように両方見る。
+// process.env.X はビルド時に文字列へ置換されるので、分割代入や動的アクセスは使えない。
+const rawKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 const url = normalizeUrl(rawUrl);
 const anonKey = normalizeKey(rawKey);
@@ -55,7 +61,7 @@ export const configProblem: string | null = (() => {
     const shown = rawKey?.trim();
     problems.push(
       !shown
-        ? "NEXT_PUBLIC_SUPABASE_ANON_KEY が未設定"
+        ? "NEXT_PUBLIC_SUPABASE_ANON_KEY（または NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY）が未設定"
         : /^https?:\/\//i.test(shown)
           ? "NEXT_PUBLIC_SUPABASE_ANON_KEY に URL が入っている（キーを入れる）"
           : "NEXT_PUBLIC_SUPABASE_ANON_KEY の値が不正",
