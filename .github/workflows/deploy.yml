@@ -45,8 +45,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
           if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
-            echo "::error::NEXT_PUBLIC_SUPABASE_URL と NEXT_PUBLIC_SUPABASE_ANON_KEY が未設定。リポジトリの Settings > Secrets and variables > Actions > Variables に入れる。"
-            exit 1
+            echo "::warning::NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY が未設定。サイトは公開するが、ルーム作成などDBを使う機能は動かない。Settings > Secrets and variables > Actions > Variables に入れてこのワークフローを re-run する。"
           fi
           npm run build
 
