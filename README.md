@@ -34,10 +34,13 @@
    | --- | --- | --- |
    | 1 | `supabase/migrations/0001_init.sql` | テーブル・抽選関数・RLS・Realtime |
    | 2 | `supabase/migrations/0002_history.sql` | 履歴用の列追加 |
-   | 3 | `supabase/seed.sql` | 大学10件と過去問273件 |
+   | 3 | `supabase/seed.sql` | 大学10件と過去問273件（形式プリセット13件を年度展開する）|
 
    3つとも何度流しても同じ結果になるので、失敗したら貼り直していい。
-   3つ目の最後に大学ごとの件数が表示されれば成功。
+   3つ目の最後に大学ごとの件数（合計273件）が表示されれば成功。
+
+   コピーするときは GitHub の **Raw** を開いてから全選択する。
+   通常のファイル表示は画面外の行を描画しないので、途中までしかコピーされないことがある。
 
 3. 画面上部の **Connect** > Frameworks > Next.js から URL とキーをコピーして、
    `.env.local`（ローカル）か GitHub の Variables（デプロイ）に入れる
