@@ -57,7 +57,7 @@
 | 名前 | 値 |
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase の Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase の anon public キー |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase の公開用キー（`sb_publishable_...`。古いプロジェクトは `eyJ...` の anon キー）|
 
 入れたら main に push するだけでビルドとデプロイが走る。Settings > Pages の Source が
 「GitHub Actions」になっていない場合はワークフローが自動で有効化を試みる。失敗したら手で切り替える。
@@ -65,8 +65,20 @@
 キーが未設定でもサイト自体は公開される（画面に「Supabase のキーが未設定」と出る）。
 あとから Variables を入れて Actions の画面でワークフローを re-run すれば、そのまま動くようになる。
 
-anon キーはブラウザに配られる前提の値で、秘密にはできない（どのホスティングでも同じ）。
-アクセス制御は RLS 側でやる。`service_role` キーは絶対にここに入れない。
+### キーの形について
+
+Supabase は API キーの形式を移行中で、どちらが出るかはプロジェクトの作成時期で変わる。
+
+| 用途 | 新しい形 | 古い形 |
+| --- | --- | --- |
+| 公開用（このアプリが使う） | `sb_publishable_...` | `anon` キー（`eyJ...`）|
+| 秘密（`npm run seed` だけが使う） | `sb_secret_...` | `service_role` キー（`eyJ...`）|
+
+publishable キーは anon キーと同じ低権限で、RLS の挙動も同じ。そのまま差し替えて使える。
+どちらの形でもこのアプリは動く。
+
+公開用のキーはブラウザに配られる前提の値で、秘密にはできない（どのホスティングでも同じ）。
+アクセス制御は RLS 側でやる。**秘密のキー（`sb_secret_...` / `service_role`）は絶対にここに入れない。**
 
 ### 承知のうえの割り切り
 
