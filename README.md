@@ -28,27 +28,25 @@
 ## セットアップ
 
 1. Supabase でプロジェクトを作る（[ダッシュボード](https://supabase.com/dashboard) > New project）
-2. SQL Editor で `supabase/migrations/` の SQL を番号順に実行する（`0001_init.sql` → `0002_history.sql`）。何度貼り直しても壊れないようにしてある
-3. `.env.example` をコピーして `.env.local` を作り、キーを入れる
+2. 左メニューの **SQL Editor** で、次の3ファイルを**この順に**貼って実行する
 
-   ```
-   cp .env.example .env.local
-   ```
+   | 順 | ファイル | 中身 |
+   | --- | --- | --- |
+   | 1 | `supabase/migrations/0001_init.sql` | テーブル・抽選関数・RLS・Realtime |
+   | 2 | `supabase/migrations/0002_history.sql` | 履歴用の列追加 |
+   | 3 | `supabase/seed.sql` | 大学10件と過去問273件 |
 
-   `.env.local` は `.gitignore` 済み。キーをリポジトリのファイルに書かない。
+   3つとも何度流しても同じ結果になるので、失敗したら貼り直していい。
+   3つ目の最後に大学ごとの件数が表示されれば成功。
 
-4. 過去問マスタを流し込む（`src/data/catalog.ts` の内容が入る）
+3. 画面上部の **Connect** > Frameworks > Next.js から URL とキーをコピーして、
+   `.env.local`（ローカル）か GitHub の Variables（デプロイ）に入れる
 
-   ```
-   npm install
-   npm run seed
-   ```
+`supabase/seed.sql` は `src/data/catalog.ts` から生成している。
+問題データを足したら `npm run gen:seed` で作り直して、SQL Editor に貼り直す。
 
-5. 起動
-
-   ```
-   npm run dev
-   ```
+ローカルに Node がある場合は、SQL Editor の代わりに `npm run seed` でも入れられる。
+そちらは `SUPABASE_SERVICE_ROLE_KEY`（`sb_secret_...`）が要る。
 
 ## 公開（GitHub Pages）
 
