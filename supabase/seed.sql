@@ -4,7 +4,7 @@
 -- 中身を変えるときは src/data/catalog.ts を直して npm run gen:seed。
 --
 -- 何度実行しても同じ結果になる（既にある行は更新される）。
--- universities 10件 / 形式プリセット 13件 → exam_sets 273件
+-- universities 12件 / 形式プリセット 15件 → exam_sets 315件
 
 insert into universities (id, name, short_name, default_weight, sort_order) values
   ('kyoto', '京都大学', '京大', 10, 1),
@@ -15,8 +15,10 @@ insert into universities (id, name, short_name, default_weight, sort_order) valu
   ('nagoya', '名古屋大学', '名大', 2, 6),
   ('kyushu', '九州大学', '九大', 2, 7),
   ('hokkaido', '北海道大学', '北大', 2, 8),
-  ('waseda', '早稲田大学', '早大', 1, 9),
-  ('keio', '慶應義塾大学', '慶大', 1, 10)
+  ('kobe', '神戸大学', '神大', 2, 9),
+  ('hitotsubashi', '一橋大学', '一橋', 1, 10),
+  ('waseda', '早稲田大学', '早大', 1, 11),
+  ('keio', '慶應義塾大学', '慶大', 1, 12)
 on conflict (id) do update set
   name = excluded.name,
   short_name = excluded.short_name,
@@ -54,6 +56,8 @@ from (values
   ('nagoya', '理系', 'math', '数学（理系）', 2005, 2025, 150, 4, null::integer, false, 'https://www.toshin-kakomon.com/', 'https://rikei-sora.com/nagoyadai-rikei-math-taisaku/'),
   ('kyushu', '理系', 'math', '数学（理系）', 2005, 2025, 150, 5, null::integer, false, 'https://www.toshin-kakomon.com/', 'https://ryubunnkai.com/kyudai-math-trend-difficulty/'),
   ('hokkaido', '理系', 'math', '数学（理系）', 2005, 2025, 120, 5, null::integer, false, 'https://www.toshin-kakomon.com/', 'https://jyuke-labo.com/daigakujyukentaisaku/hokkaidodaigaku/suugaku/'),
+  ('kobe', '理系', 'math', '数学（理系）', 2005, 2025, 120, 5, 150, false, 'https://www.kobe-u.ac.jp/ja/admissions/undergraduate/examinations/', 'https://jyuke-labo.com/daigakujyukentaisaku/kobedaigaku/suugaku/'),
+  ('hitotsubashi', '文系', 'math', '数学（文系）', 2005, 2025, 120, 5, null::integer, false, 'https://juken.hit-u.ac.jp/admission/info/ito.html', 'https://jyuke-labo.com/daigakujyukentaisaku/hitotsubashidaigaku/kamokubetsu/'),
   ('waseda', '基幹理工学部', 'math', '数学', 2005, 2025, 120, 5, null::integer, false, 'https://www.toshin-kakomon.com/', 'https://logicalteacher.com/post-4273/4273/'),
   ('keio', '理工学部', 'math', '数学', 2005, 2025, 120, 5, null::integer, false, 'https://www.toshin-kakomon.com/', 'https://hiraocafe.com/exam/keio_rikou.html')
 ) as p (
@@ -71,7 +75,7 @@ on conflict (university_id, faculty, year, subject) do update set
   access_url = excluded.access_url,
   source_url = excluded.source_url;
 
--- 確認用。合計 273 件になっていれば成功
+-- 確認用。合計 315 件になっていれば成功
 select u.short_name, count(*) as sets
   from exam_sets e join universities u on u.id = e.university_id
  group by u.short_name, u.sort_order
