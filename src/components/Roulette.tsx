@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { fanfare, isMuted, lock, setMuted, tick } from "@/lib/sound";
 import type { Draw, ExamSet, Room, University } from "@/lib/types";
 import DrawnCard, { SourceLinks, universityName } from "./DrawnCard";
 
@@ -15,9 +16,20 @@ type Props = {
   onError: (message: string | null) => void;
 };
 
+/** 大学が止まるまで / 年度が止まるまで（ミリ秒） */
+const UNI_MS = 1100;
+const YEAR_MS = 2200;
+
+type Phase = "uni" | "year" | "done";
+
+function prefersReducedMotion() {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 /**
  * 抽選そのものはサーバー側で済んでいる（F3）。ここで回っているのは見せ方だけで、
- * 止まる先は最初から決まっている。
+ * 止まる先は最初から決まっている。演出（F12）は大学 → 年度の2段階で減速して止まる。
  */
 export default function Roulette({
   room,
@@ -28,19 +40,64 @@ export default function Roulette({
   memberId,
   onError,
 }: Props) {
-  const [reeling, setReeling] = useState(true);
+  const [phase, setPhase] = useState<Phase>("uni");
   const [frame, setFrame] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [muted, setMutedState] = useState(true);
+  const timers = useRef<number[]>([]);
+
+  useEffect(() => setMutedState(isMuted()), []);
 
   useEffect(() => {
-    setReeling(true);
-    const tick = setInterval(() => setFrame((f) => f + 1), 70);
-    const stop = setTimeout(() => setReeling(false), 1200);
-    return () => {
-      clearInterval(tick);
-      clearTimeout(stop);
+    if (!draw) return;
+
+    const clearAll = () => {
+      timers.current.forEach((t) => window.clearTimeout(t));
+      timers.current = [];
     };
-  }, [draw?.id]);
+    clearAll();
+
+    if (prefersReducedMotion()) {
+      setPhase("done");
+      fanfare();
+      return clearAll;
+    }
+
+    setPhase("uni");
+    setFrame(0);
+    const startedAt = performance.now();
+    const phaseRef = { current: "uni" as Phase };
+
+    // 経過とともにコマ送りを遅くして「減速して止まる」ようにする
+    const step = () => {
+      const elapsed = performance.now() - startedAt;
+      if (elapsed >= YEAR_MS) {
+        setPhase("done");
+        lock();
+        fanfare();
+        return;
+      }
+      if (elapsed >= UNI_MS && phaseRef.current === "uni") {
+        phaseRef.current = "year";
+        setPhase("year");
+        lock();
+      }
+      const progress = Math.min(1, elapsed / YEAR_MS);
+      setFrame((f) => f + 1);
+      tick();
+      timers.current.push(window.setTimeout(step, 45 + progress ** 3 * 260));
+    };
+
+    timers.current.push(window.setTimeout(step, 45));
+    return clearAll;
+  }, [draw?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggleMute() {
+    const next = !muted;
+    setMuted(next);
+    setMutedState(next);
+    if (!next) lock(); // 解除した瞬間に音量が分かるように一度鳴らす
+  }
 
   async function redraw() {
     setBusy(true);
@@ -70,16 +127,29 @@ export default function Roulette({
     return <p className="sub">抽選結果を取得中...</p>;
   }
 
-  if (reeling) {
+  const muteButton = (
+    <button className="ghost" onClick={toggleMute} aria-pressed={!muted}>
+      {muted ? "効果音オフ" : "効果音オン"}
+    </button>
+  );
+
+  if (phase !== "done") {
     const pool = universities.length > 0 ? universities : [{ short_name: "…" } as University];
-    const u = pool[frame % pool.length];
-    const year = 2005 + ((frame * 7) % 21);
+    const uniText =
+      phase === "uni"
+        ? pool[frame % pool.length].short_name
+        : universityName(universities, examSet.university_id);
+    const yearText = phase === "uni" ? "????" : String(2005 + ((frame * 7) % 21));
+
     return (
       <div className="panel">
         <div className="reel">
-          {u.short_name} {year}年度
+          <span className={phase === "uni" ? "spinning" : "locked"}>{uniText}</span>{" "}
+          <span className={phase === "uni" ? "" : "spinning"}>{yearText}</span>
+          <span style={{ fontSize: "0.6em" }}>年度</span>
         </div>
         <p className="sub" style={{ textAlign: "center" }}>抽選中...</p>
+        <div className="row" style={{ justifyContent: "center" }}>{muteButton}</div>
       </div>
     );
   }
@@ -87,8 +157,11 @@ export default function Roulette({
   return (
     <>
       <div className="panel">
-        <DrawnCard draw={draw} examSet={examSet} universities={universities} />
+        <div className="reveal">
+          <DrawnCard draw={draw} examSet={examSet} universities={universities} />
+        </div>
         {draw.is_redraw && <p className="sub" style={{ textAlign: "center" }}>振り直し後の結果</p>}
+        <div className="row" style={{ justifyContent: "center" }}>{muteButton}</div>
       </div>
 
       <SourceLinks examSet={examSet} />

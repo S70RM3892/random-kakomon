@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { getDisplayName, setDisplayName, setMemberId } from "@/lib/identity";
+import { getDeviceId, getDisplayName, setDisplayName, setMemberId } from "@/lib/identity";
 import { UNIVERSITIES, YEAR_MAX, YEAR_MIN } from "@/data/catalog";
 
 export default function TopPage() {
@@ -45,7 +46,7 @@ export default function TopPage() {
 
       const { data: member, error: memberError } = await supabase
         .from("members")
-        .insert({ room_id: room.id, display_name: trimmed })
+        .insert({ room_id: room.id, display_name: trimmed, device_id: getDeviceId() })
         .select()
         .single();
       if (memberError) throw memberError;
@@ -103,6 +104,16 @@ export default function TopPage() {
         <p className="sub">
           招待リンクをそのまま開く。リンクを開いてから表示名を入れる。
         </p>
+      </div>
+
+      <div className="panel">
+        <h3>履歴・分析</h3>
+        <p className="sub">
+          科目別の平均得点率、失点原因の割合、京大過去問の消化率をこの端末の記録から出す。
+        </p>
+        <Link href="/history">
+          <button>履歴を見る</button>
+        </Link>
       </div>
 
       {error && <div className="err">{error}</div>}

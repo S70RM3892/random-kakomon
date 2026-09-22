@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { getDisplayName, getMemberId, setDisplayName, setMemberId } from "@/lib/identity";
+import { getDeviceId, getDisplayName, getMemberId, setDisplayName, setMemberId } from "@/lib/identity";
 import type { Draw, ExamSet, Member, Result, Room, University } from "@/lib/types";
 import Lobby from "./Lobby";
 import Roulette from "./Roulette";
@@ -160,7 +160,7 @@ export default function RoomClient({ roomId }: { roomId: string }) {
       setDisplayName(trimmed);
       const { data, error: e } = await supabase
         .from("members")
-        .insert({ room_id: roomId, display_name: trimmed })
+        .insert({ room_id: roomId, display_name: trimmed, device_id: getDeviceId() })
         .select()
         .single();
       if (e) throw e;

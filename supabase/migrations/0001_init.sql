@@ -334,7 +334,20 @@ create policy review_items_all on review_items for all to anon, authenticated us
 
 -- ---------------------------------------------------------------- Realtime
 
-alter publication supabase_realtime add table rooms;
-alter publication supabase_realtime add table members;
-alter publication supabase_realtime add table draws;
-alter publication supabase_realtime add table results;
+-- 貼り直しても途中で落ちないように、未登録のテーブルだけ追加する
+do $$
+declare
+  t text;
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
+  end if;
+  foreach t in array array['rooms', 'members', 'draws', 'results'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;

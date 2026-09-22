@@ -22,3 +22,19 @@ export function getMemberId(roomId: string): string | null {
 export function setMemberId(roomId: string, memberId: string) {
   window.localStorage.setItem(memberKey(roomId), memberId);
 }
+
+const DEVICE_KEY = "kakomon.deviceId";
+
+/**
+ * 部屋をまたいだ履歴（F10）を繋ぐための端末ごとの匿名 id。
+ * ログインしないので、端末を変えると履歴は引き継がれない。
+ */
+export function getDeviceId(): string {
+  if (typeof window === "undefined") return "";
+  let id = window.localStorage.getItem(DEVICE_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    window.localStorage.setItem(DEVICE_KEY, id);
+  }
+  return id;
+}
