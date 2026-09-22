@@ -1,48 +1,73 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * 環境変数の値を URL として使える形に直す。使えなければ null。
+ * 環境変数の値を検査して、使える形なら返す。使えなければ null。
  *
- * ここを素通しにすると、値が不正なときに createClient が例外を投げてビルドごと落ちる。
- * CI では未設定の変数が空文字で渡るし、値を手で貼ると前後の空白や改行、
- * スキーム(https://)の付け忘れが混ざる。どれもビルドを止める理由にはしない。
+ * 素通しにすると、値が不正なときに createClient が例外を投げてビルドごと落ちる。
+ * 値を手で貼ると、前後の空白や改行、スキームの付け忘れ、2つの変数の入れ違いが混ざる。
+ * どれもビルドを止める理由にはしないが、画面には何が間違っているか出す。
  */
 function normalizeUrl(raw: string | undefined): string | null {
   const value = raw?.trim();
   if (!value) return null;
+  let parsed: URL;
   try {
-    return new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`).origin;
+    parsed = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
   } catch {
     return null;
   }
+  // "txvxx" のような値もURLとしては解釈できてしまうが、接続先にはなりえない。
+  // ホスト名にドットが無いものは弾いて、「設定済み」に見えないようにする
+  if (!parsed.hostname.includes(".")) return null;
+  return parsed.origin;
+}
+
+function normalizeKey(raw: string | undefined): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  // URL を貼り間違えているケース。キーとしては使えない
+  if (/^https?:\/\//i.test(value)) return null;
+  return value;
 }
 
 const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const url = normalizeUrl(rawUrl);
-const anonKey = rawKey?.trim() || null;
+const anonKey = normalizeKey(rawKey);
 
 export const isSupabaseConfigured = Boolean(url && anonKey);
 
-if (rawUrl?.trim() && !url) {
-  // 値は入っているのに URL として読めない。ビルドは通すが気づけるようにする
-  console.warn(
-    `[supabase] NEXT_PUBLIC_SUPABASE_URL が URL として読めない: ${JSON.stringify(rawUrl)}。` +
-      "Supabase の Project URL（https://xxxxxxxx.supabase.co の形）を入れる。",
-  );
-}
+/** 何が間違っているかを画面とログに出すための説明。問題が無ければ null */
+export const configProblem: string | null = (() => {
+  if (isSupabaseConfigured) return null;
+  const problems: string[] = [];
+
+  if (!url) {
+    const shown = rawUrl?.trim();
+    problems.push(
+      shown
+        ? `NEXT_PUBLIC_SUPABASE_URL の値が Supabase の URL になっていない（今は「${shown.slice(0, 40)}」）`
+        : "NEXT_PUBLIC_SUPABASE_URL が未設定",
+    );
+  }
+  if (!anonKey) {
+    const shown = rawKey?.trim();
+    problems.push(
+      !shown
+        ? "NEXT_PUBLIC_SUPABASE_ANON_KEY が未設定"
+        : /^https?:\/\//i.test(shown)
+          ? "NEXT_PUBLIC_SUPABASE_ANON_KEY に URL が入っている（キーを入れる）"
+          : "NEXT_PUBLIC_SUPABASE_ANON_KEY の値が不正",
+    );
+  }
+  return problems.join(" / ");
+})();
+
+if (configProblem) console.warn(`[supabase] ${configProblem}`);
 
 export const supabase = createClient(
   url ?? "https://placeholder.supabase.co",
   anonKey ?? "placeholder-anon-key",
   { realtime: { params: { eventsPerSecond: 5 } } },
 );
-
-export function assertConfigured() {
-  if (!isSupabaseConfigured) {
-    throw new Error(
-      "NEXT_PUBLIC_SUPABASE_URL と NEXT_PUBLIC_SUPABASE_ANON_KEY が未設定、または値が不正。",
-    );
-  }
-}

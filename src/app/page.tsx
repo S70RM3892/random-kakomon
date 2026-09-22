@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, configProblem } from "@/lib/supabase";
 import { getDeviceId, getDisplayName, setDisplayName, setMemberId } from "@/lib/identity";
 import { UNIVERSITIES, YEAR_MAX, YEAR_MIN } from "@/data/catalog";
 
@@ -74,8 +74,15 @@ export default function TopPage() {
 
       {!isSupabaseConfigured && (
         <div className="err" style={{ marginTop: 16 }}>
-          Supabase のキーが未設定。<code>.env.example</code> を見て{" "}
-          <code>.env.local</code> を作るか、デプロイ先の環境変数に入れる。
+          <strong>Supabase の設定が正しくない。</strong>
+          {configProblem && (
+            <div style={{ marginTop: 6 }}>{configProblem}</div>
+          )}
+          <div style={{ marginTop: 6 }}>
+            URL は <code>https://&lt;英数字&gt;.supabase.co</code>、キーは{" "}
+            <code>sb_publishable_...</code>（古いプロジェクトは <code>eyJ...</code>）。
+            どちらも Supabase の Settings &gt; API から取る。
+          </div>
         </div>
       )}
 
