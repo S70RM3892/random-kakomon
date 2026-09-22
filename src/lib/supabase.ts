@@ -22,11 +22,16 @@ function normalizeUrl(raw: string | undefined): string | null {
   return parsed.origin;
 }
 
+/**
+ * Supabase の公開キーは sb_publishable_... か eyJ... の長い一続きの文字列で、
+ * 空白もスラッシュも含まない。URL や説明文を貼り間違えたものはここで弾く。
+ */
 function normalizeKey(raw: string | undefined): string | null {
   const value = raw?.trim();
   if (!value) return null;
-  // URL を貼り間違えているケース。キーとしては使えない
-  if (/^https?:\/\//i.test(value)) return null;
+  if (/^https?:\/\//i.test(value)) return null; // URL を貼っている
+  if (/[\s/]/.test(value)) return null; // 空白やパス区切りを含む = キーではない
+  if (value.length < 20) return null; // 短すぎる
   return value;
 }
 
@@ -40,12 +45,22 @@ const DEFAULT_URL = "https://zcwqgnlcigkieymhbnvh.supabase.co";
 
 const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_URL;
 
-// Supabase の Connect ダイアログは Next.js 向けに PUBLISHABLE_KEY という名前で出す。
+// Supabase の Connect ダイアログは Next.js 向けに PUBLISHABLE_KEY という名前で出すので、
 // どちらの名前で登録してもそのまま動くように両方見る。
 // process.env.X はビルド時に文字列へ置換されるので、分割代入や動的アクセスは使えない。
-const rawKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+//
+// 単純に || で繋ぐと、片方に消し忘れの値が残っているだけで、
+// もう片方に正しく入れたキーが無視される。キーとして通る方を採る。
+const rawAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const rawPublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const rawKey = normalizeKey(rawAnonKey)
+  ? rawAnonKey
+  : normalizeKey(rawPublishableKey)
+    ? rawPublishableKey
+    : // どちらも使えない。診断で中身を示すため、値が入っている方を残す
+      rawAnonKey?.trim()
+      ? rawAnonKey
+      : rawPublishableKey;
 
 const url = normalizeUrl(rawUrl);
 const anonKey = normalizeKey(rawKey);
@@ -69,10 +84,10 @@ export const configProblem: string | null = (() => {
     const shown = rawKey?.trim();
     problems.push(
       !shown
-        ? "NEXT_PUBLIC_SUPABASE_ANON_KEY（または NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY）が未設定"
+        ? "キーが未設定（NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY に入れる）"
         : /^https?:\/\//i.test(shown)
-          ? "NEXT_PUBLIC_SUPABASE_ANON_KEY に URL が入っている（キーを入れる）"
-          : "NEXT_PUBLIC_SUPABASE_ANON_KEY の値が不正",
+          ? `キーの変数に URL が入っている（今は「${shown.slice(0, 50)}」）。Supabase の Settings > API Keys にある sb_publishable_ で始まる値を入れる`
+          : `キーの値が Supabase のキーの形になっていない（今は「${shown.slice(0, 50)}」）`,
     );
   }
   return problems.join(" / ");
