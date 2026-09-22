@@ -250,9 +250,96 @@ code {
   to   { transform: scale(1); opacity: 1; }
 }
 
+/* 止まる直前の溜め。次に何か来ると体で分かるように脈打たせる */
+.panel.suspense { animation: suspense 700ms ease-in-out both; }
+@keyframes suspense {
+  0%   { transform: scale(1); box-shadow: none; }
+  70%  { transform: scale(1.015); box-shadow: 0 0 0 2px rgba(79, 124, 255, 0.35); }
+  100% { transform: scale(1); box-shadow: 0 0 0 6px rgba(79, 124, 255, 0); }
+}
+
+/* ---- レア度（rarity.ts の tier に対応）-------------------------------- */
+.reveal-panel { position: relative; overflow: hidden; }
+
+.tier-badge {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 4px;
+  animation: pop 380ms cubic-bezier(0.18, 1.4, 0.4, 1) both;
+}
+.tier-badge .tier-name {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.tier-badge .tier-label { font-size: 14px; font-weight: 700; }
+.tier-badge .tier-prob { font-size: 12px; color: var(--muted); }
+
+.tier-n   { color: var(--muted); }
+.tier-r   { color: #6ea8ff; }
+.tier-sr  { color: #c08bff; }
+.tier-ssr { color: #ffc64a; }
+
+/* 上位だけ枠を光らせる。毎回光ると「特別」ではなくなる */
+.reveal-panel.tier-sr  { box-shadow: 0 0 0 1px rgba(192, 139, 255, 0.5), 0 0 28px rgba(192, 139, 255, 0.18); }
+.reveal-panel.tier-ssr { box-shadow: 0 0 0 1px rgba(255, 198, 74, 0.6), 0 0 36px rgba(255, 198, 74, 0.25); }
+.reveal-panel.tier-ssr .tier-name { animation: shine 1.6s ease-in-out infinite; }
+@keyframes shine {
+  0%, 100% { text-shadow: none; }
+  50%      { text-shadow: 0 0 14px currentColor; }
+}
+
+/* 当たりの粒。画像は持たず span を飛ばす */
+.burst {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.burst span {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  margin: -3px 0 0 -3px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0;
+  animation: burst 820ms ease-out both;
+  transform: rotate(var(--angle)) translateY(0);
+}
+@keyframes burst {
+  0%   { opacity: 1; transform: rotate(var(--angle)) translateY(0) scale(1); }
+  100% { opacity: 0; transform: rotate(var(--angle)) translateY(calc(var(--distance) * -1)) scale(0.4); }
+}
+
+/* ---- 連続記録（streak.ts）--------------------------------------------- */
+.streak {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.streak strong { color: #ffc64a; font-size: 15px; }
+.streak .streak-best { color: #6ee7a8; font-weight: 700; }
+
 @media (prefers-reduced-motion: reduce) {
   .reveal { animation: none; }
   .reel .spinning { filter: none; }
+  .panel.suspense { animation: none; }
+  .tier-badge { animation: none; }
+  .burst { display: none; }
+  .reveal-panel.tier-ssr .tier-name { animation: none; }
 }
 
 /* ---- F9 結果共有 ------------------------------------------------------- */

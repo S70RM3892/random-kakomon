@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { fanfare, isMuted, lock, setMuted, tick } from "@/lib/sound";
+import { buildup, buzz, fanfareFor, isMuted, lock, setMuted, tick } from "@/lib/sound";
+import { rarityOf, type Rarity } from "@/lib/rarity";
+import { recordDraw, type Streak } from "@/lib/streak";
 import type { Draw, ExamSet, Room, University } from "@/lib/types";
 import DrawnCard, { SourceLinks, universityName } from "./DrawnCard";
 
@@ -16,11 +18,12 @@ type Props = {
   onError: (message: string | null) => void;
 };
 
-/** 大学が止まるまで / 年度が止まるまで（ミリ秒） */
+/** 大学が止まるまで / 年度が止まるまで / 結果を出すまで（ミリ秒） */
 const UNI_MS = 1100;
 const YEAR_MS = 2200;
+const SUSPENSE_MS = 700;
 
-type Phase = "uni" | "year" | "done";
+type Phase = "uni" | "year" | "suspense" | "done";
 
 function prefersReducedMotion() {
   if (typeof window === "undefined") return false;
@@ -29,7 +32,10 @@ function prefersReducedMotion() {
 
 /**
  * 抽選そのものはサーバー側で済んでいる（F3）。ここで回っているのは見せ方だけで、
- * 止まる先は最初から決まっている。演出（F12）は大学 → 年度の2段階で減速して止まる。
+ * 止まる先は最初から決まっている。演出（F12）は
+ * 大学 → 年度 → 溜め → 結果 の順で、最後にレア度に応じた当たり演出を出す。
+ *
+ * レア度は実際の抽選確率から出している（rarity.ts）。演出のために数字を盛らない。
  */
 export default function Roulette({
   room,
@@ -44,7 +50,13 @@ export default function Roulette({
   const [frame, setFrame] = useState(0);
   const [busy, setBusy] = useState(false);
   const [muted, setMutedState] = useState(true);
+  const [streak, setStreak] = useState<Streak | null>(null);
   const timers = useRef<number[]>([]);
+
+  const rarity: Rarity | null = useMemo(
+    () => (examSet ? rarityOf(room, universities, examSet) : null),
+    [room, universities, examSet],
+  );
 
   useEffect(() => setMutedState(isMuted()), []);
 
@@ -57,9 +69,16 @@ export default function Roulette({
     };
     clearAll();
 
-    if (prefersReducedMotion()) {
+    const intensity = rarity?.intensity ?? 0;
+    const finish = () => {
       setPhase("done");
-      fanfare();
+      setStreak(recordDraw());
+      fanfareFor(intensity);
+      buzz(intensity);
+    };
+
+    if (prefersReducedMotion()) {
+      finish();
       return clearAll;
     }
 
@@ -71,16 +90,21 @@ export default function Roulette({
     // 経過とともにコマ送りを遅くして「減速して止まる」ようにする
     const step = () => {
       const elapsed = performance.now() - startedAt;
+
       if (elapsed >= YEAR_MS) {
-        setPhase("done");
+        // 止まってすぐ出さず、一拍おいてから結果を見せる
+        phaseRef.current = "suspense";
+        setPhase("suspense");
         lock();
-        fanfare();
+        buildup(SUSPENSE_MS);
+        timers.current.push(window.setTimeout(finish, SUSPENSE_MS));
         return;
       }
       if (elapsed >= UNI_MS && phaseRef.current === "uni") {
         phaseRef.current = "year";
         setPhase("year");
         lock();
+        buzz(0);
       }
       const progress = Math.min(1, elapsed / YEAR_MS);
       setFrame((f) => f + 1);
@@ -135,32 +159,56 @@ export default function Roulette({
 
   if (phase !== "done") {
     const pool = universities.length > 0 ? universities : [{ short_name: "…" } as University];
-    const uniText =
+    const spinningUni = phase === "uni";
+    const uniText = spinningUni
+      ? pool[frame % pool.length].short_name
+      : universityName(universities, examSet.university_id);
+    const yearText =
       phase === "uni"
-        ? pool[frame % pool.length].short_name
-        : universityName(universities, examSet.university_id);
-    const yearText = phase === "uni" ? "????" : String(2005 + ((frame * 7) % 21));
+        ? "????"
+        : phase === "year"
+          ? String(2005 + ((frame * 7) % 21))
+          : String(examSet.year);
 
     return (
-      <div className="panel">
+      <div className={`panel${phase === "suspense" ? " suspense" : ""}`}>
         <div className="reel">
-          <span className={phase === "uni" ? "spinning" : "locked"}>{uniText}</span>{" "}
-          <span className={phase === "uni" ? "" : "spinning"}>{yearText}</span>
+          <span className={spinningUni ? "spinning" : "locked"}>{uniText}</span>{" "}
+          <span className={phase === "year" ? "spinning" : phase === "uni" ? "" : "locked"}>
+            {yearText}
+          </span>
           <span style={{ fontSize: "0.6em" }}>年度</span>
         </div>
-        <p className="sub" style={{ textAlign: "center" }}>抽選中...</p>
+        <p className="sub" style={{ textAlign: "center" }}>
+          {phase === "suspense" ? "……" : "抽選中..."}
+        </p>
         <div className="row" style={{ justifyContent: "center" }}>{muteButton}</div>
       </div>
     );
   }
 
+  const tierClass = rarity ? `tier-${rarity.tier.toLowerCase()}` : "";
+
   return (
     <>
-      <div className="panel">
+      <div className={`panel reveal-panel ${tierClass}`}>
+        {rarity && rarity.intensity > 0 && <Burst intensity={rarity.intensity} />}
+        {rarity && (
+          <div className={`tier-badge ${tierClass}`}>
+            <span className="tier-name">{rarity.tier}</span>
+            <span className="tier-label">{rarity.label}</span>
+            {rarity.probability !== null && (
+              <span className="tier-prob">
+                この設定で {Math.round(rarity.probability * 100)}% の枠
+              </span>
+            )}
+          </div>
+        )}
         <div className="reveal">
           <DrawnCard draw={draw} examSet={examSet} universities={universities} />
         </div>
         {draw.is_redraw && <p className="sub" style={{ textAlign: "center" }}>振り直し後の結果</p>}
+        {streak && <StreakLine streak={streak} />}
         <div className="row" style={{ justifyContent: "center" }}>{muteButton}</div>
       </div>
 
@@ -186,5 +234,49 @@ export default function Roulette({
         </p>
       )}
     </>
+  );
+}
+
+/** 当たりの粒。画像は使わず span を飛ばすだけにする */
+function Burst({ intensity }: { intensity: number }) {
+  const pieces = useMemo(() => {
+    const count = 10 + intensity * 10;
+    return Array.from({ length: count }, (_, i) => ({
+      // 決め打ちの角度で扇状に散らす。乱数だと描画のたびに変わって落ち着かない
+      angle: (360 / count) * i + (i % 3) * 7,
+      distance: 70 + ((i * 37) % 90),
+      delay: (i % 5) * 28,
+    }));
+  }, [intensity]);
+
+  return (
+    <div className="burst" aria-hidden="true">
+      {pieces.map((p, i) => (
+        <span
+          key={i}
+          style={
+            {
+              "--angle": `${p.angle}deg`,
+              "--distance": `${p.distance}px`,
+              animationDelay: `${p.delay}ms`,
+            } as React.CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+function StreakLine({ streak }: { streak: Streak }) {
+  return (
+    <p className="streak">
+      <strong>{streak.days}日連続</strong>
+      <span>今日 {streak.today} 回目</span>
+      <span>通算 {streak.total} 回</span>
+      {streak.best > streak.days && <span>最長 {streak.best}日</span>}
+      {streak.days > 0 && streak.days === streak.best && streak.best > 1 && (
+        <span className="streak-best">自己ベスト更新中</span>
+      )}
+    </p>
   );
 }

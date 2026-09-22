@@ -57,10 +57,64 @@ export function lock() {
 
 /** 抽選結果が出そろったときの音 */
 export function fanfare() {
+  fanfareFor(0);
+}
+
+/**
+ * レア度に応じたファンファーレ。intensity は rarity.ts の 0〜3。
+ * 上ほど音数が増えて高く終わる。当たりの大きさが耳で分かるようにする。
+ */
+export function fanfareFor(intensity: number) {
   if (isMuted()) return;
   const ac = context();
   if (!ac) return;
-  [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-    window.setTimeout(() => blip(f, 0.24, "triangle", 0.1), i * 90);
+
+  // ドミソド → 上に伸ばしていく
+  const scales = [
+    [523.25, 659.25, 783.99, 1046.5],
+    [523.25, 659.25, 783.99, 1046.5, 1318.5],
+    [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568.0],
+    [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568.0, 2093.0],
+  ];
+  const notes = scales[Math.min(intensity, scales.length - 1)];
+  const gain = 0.1 + Math.min(intensity, 3) * 0.015;
+  notes.forEach((f, i) => {
+    window.setTimeout(() => blip(f, 0.24, "triangle", gain), i * 80);
   });
+}
+
+/**
+ * 止まる直前の溜め。低音から上がっていき、次に来るものを予告する。
+ * durationMs のあいだ鳴らす。
+ */
+export function buildup(durationMs: number) {
+  if (isMuted()) return;
+  const ac = context();
+  if (!ac) return;
+  const osc = ac.createOscillator();
+  const amp = ac.createGain();
+  const sec = durationMs / 1000;
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(220, ac.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(880, ac.currentTime + sec);
+  amp.gain.setValueAtTime(0.0001, ac.currentTime);
+  amp.gain.exponentialRampToValueAtTime(0.05, ac.currentTime + sec * 0.8);
+  amp.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + sec);
+  osc.connect(amp).connect(ac.destination);
+  osc.start();
+  osc.stop(ac.currentTime + sec + 0.02);
+}
+
+/**
+ * 端末を短く震わせる。対応していない端末では何も起きない。
+ * 音を切っていても手応えは残したいので、ミュート設定とは独立させる。
+ */
+export function buzz(intensity: number) {
+  if (typeof navigator === "undefined" || !navigator.vibrate) return;
+  const patterns = [[18], [26], [18, 60, 26], [18, 50, 26, 50, 60]];
+  try {
+    navigator.vibrate(patterns[Math.min(Math.max(intensity, 0), patterns.length - 1)]);
+  } catch {
+    // 端末が拒否しても演出以外に影響はない
+  }
 }
