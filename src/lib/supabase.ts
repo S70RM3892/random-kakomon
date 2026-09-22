@@ -30,7 +30,15 @@ function normalizeKey(raw: string | undefined): string | null {
   return value;
 }
 
-const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+/**
+ * このアプリが使う Supabase プロジェクトの URL。
+ *
+ * 秘密ではない（ブラウザに配られる値で、アクセス制御は RLS 側でやる）ので直接書く。
+ * 環境変数があればそちらが優先されるので、別プロジェクトに向けたいときはそれで差し替える。
+ */
+const DEFAULT_URL = "https://zcwqgnlcigkieymhbnvh.supabase.co";
+
+const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_URL;
 
 // Supabase の Connect ダイアログは Next.js 向けに PUBLISHABLE_KEY という名前で出す。
 // どちらの名前で登録してもそのまま動くように両方見る。

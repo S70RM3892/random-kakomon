@@ -28,24 +28,23 @@
 ## セットアップ
 
 1. Supabase でプロジェクトを作る（[ダッシュボード](https://supabase.com/dashboard) > New project）
-2. 左メニューの **SQL Editor** で、次の3ファイルを**この順に**貼って実行する
+2. **SQL Editor** に [`supabase/setup.sql`](supabase/setup.sql) を貼って実行する
 
-   | 順 | ファイル | 中身 |
-   | --- | --- | --- |
-   | 1 | `supabase/migrations/0001_init.sql` | テーブル・抽選関数・RLS・Realtime |
-   | 2 | `supabase/migrations/0002_history.sql` | 履歴用の列追加 |
-   | 3 | `supabase/seed.sql` | 大学10件と過去問273件（形式プリセット13件を年度展開する）|
+   テーブル・関数・RLS・Realtime・データ（大学10件、過去問273件）が全部入る。
+   何度流しても同じ結果になるので、失敗したら貼り直していい。
+   最後に大学ごとの件数（合計273件）が表示されれば成功。
 
-   3つとも何度流しても同じ結果になるので、失敗したら貼り直していい。
-   3つ目の最後に大学ごとの件数（合計273件）が表示されれば成功。
+   コピーは GitHub の **Raw** を開いてから全選択する。
+   通常のファイル表示は画面外の行を描画せず、途中までしかコピーされないことがある。
 
-   コピーするときは GitHub の **Raw** を開いてから全選択する。
-   通常のファイル表示は画面外の行を描画しないので、途中までしかコピーされないことがある。
-
-3. 画面上部の **Connect** > Frameworks > Next.js から URL とキーをコピーして、
+3. Supabase の **Settings > API Keys** から Publishable key（`sb_publishable_...`）をコピーして、
    `.env.local`（ローカル）か GitHub の Variables（デプロイ）に入れる
 
-`supabase/seed.sql` は `src/data/catalog.ts` から生成している。
+   プロジェクト URL は `src/lib/supabase.ts` に直接書いてある（秘密ではないため）。
+   別のプロジェクトに向けたいときだけ `NEXT_PUBLIC_SUPABASE_URL` を設定する。
+
+`supabase/setup.sql` は3つの SQL を繋げたもの。中身を変えるときは元のファイルを直して
+`npm run gen:seed`（seed を作り直す場合）と `sh scripts/gen-setup-sql.sh` を流す。
 問題データを足したら `npm run gen:seed` で作り直して、SQL Editor に貼り直す。
 
 ローカルに Node がある場合は、SQL Editor の代わりに `npm run seed` でも入れられる。
