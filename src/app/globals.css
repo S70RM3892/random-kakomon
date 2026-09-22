@@ -254,3 +254,17 @@ code {
   .reveal { animation: none; }
   .reel .spinning { filter: none; }
 }
+
+/* ---- F9 結果共有 ------------------------------------------------------- */
+/* 人数 × 大問数でスマホ幅に収まらないので、表だけ横に流す */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+.scroll-x table { min-width: 100%; }
+.scroll-x th, .scroll-x td { white-space: nowrap; }
+
+tr.me td { background: rgba(79, 124, 255, 0.10); }
+tr.me td:first-child { box-shadow: inset 2px 0 0 var(--accent); }

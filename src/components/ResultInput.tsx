@@ -6,6 +6,7 @@ import { MISS_TAGS } from "@/data/catalog";
 import { elapsedMs } from "@/lib/timer";
 import type { Draw, ExamSet, Member, Result, Room, University } from "@/lib/types";
 import DrawnCard from "./DrawnCard";
+import SharedResults from "./SharedResults";
 
 type Props = {
   room: Room;
@@ -191,17 +192,14 @@ export default function ResultInput({
         </div>
       </div>
 
-      <div className="panel">
-        <h3>入力状況</h3>
-        <div className="chips">
-          {members.map((m) => (
-            <span key={m.id} className="badge">
-              {m.display_name}: {results.some((r) => r.member_id === m.id) ? "入力済み" : "未入力"}
-            </span>
-          ))}
-        </div>
-        <p className="sub">全員の点数を並べて見せるのは2版目（SPEC F9）。</p>
-      </div>
+      <SharedResults
+        draw={draw}
+        examSet={examSet}
+        members={members}
+        results={results}
+        memberId={memberId}
+        questionNos={questionNos}
+      />
 
       {isHost && (
         <button
