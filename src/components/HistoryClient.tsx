@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, configProblem } from "@/lib/supabase";
 import { getDeviceId } from "@/lib/identity";
 import { MISS_TAGS } from "@/data/catalog";
 
@@ -46,7 +46,7 @@ export default function HistoryClient() {
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
-      setError("Supabase のキーが未設定。");
+      setError(`Supabase の設定が正しくない。${configProblem ?? ""}`);
       setLoading(false);
       return;
     }

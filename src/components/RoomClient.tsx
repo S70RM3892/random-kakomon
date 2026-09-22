@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, configProblem } from "@/lib/supabase";
 import { getDeviceId, getDisplayName, getMemberId, setDisplayName, setMemberId } from "@/lib/identity";
 import type { Draw, ExamSet, Member, Result, Room, University } from "@/lib/types";
 import Lobby from "./Lobby";
@@ -69,7 +69,7 @@ export default function RoomClient({ roomId }: { roomId: string }) {
   // 初回ロード
   useEffect(() => {
     if (!isSupabaseConfigured) {
-      setError("Supabase のキーが未設定。.env.example を見て設定する。");
+      setError(`Supabase の設定が正しくない。${configProblem ?? ""}`);
       setLoading(false);
       return;
     }
