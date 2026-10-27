@@ -3,7 +3,7 @@
  *   npm run gen:seed
  *
  * 出力先は supabase/seed.sql。Supabase の SQL Editor に貼って実行する前提なので、
- * 273行を並べるのではなく、14件の「形式プリセット」を SQL 側で年度展開する。
+ * 全行を並べるのではなく、「形式プリセット」を SQL 側で年度展開する。
  * 貼る量が10分の1で済み、コピー漏れが起きにくい。
  * catalog.ts を直したら流し直す。何度実行しても同じ結果になる（upsert）。
  */
@@ -36,6 +36,10 @@ const presetRows = FORMAT_PRESETS.map((p) =>
   ].join(", ")})`,
 ).join(",\n");
 
+const presetKeys = FORMAT_PRESETS.map((p) =>
+  `     (${[lit(p.universityId), lit(p.faculty), lit(p.subject)].join(", ")})`,
+).join(",\n");
+
 const expected = buildExamSetSeeds().length;
 
 const sql = `-- 大学マスタと過去問セットの投入。0001 と 0002 を流したあとに実行する。
@@ -43,8 +47,13 @@ const sql = `-- 大学マスタと過去問セットの投入。0001 と 0002 �
 -- このファイルは scripts/gen-seed-sql.ts が catalog.ts から生成する。手で編集しない。
 -- 中身を変えるときは src/data/catalog.ts を直して npm run gen:seed。
 --
--- 何度実行しても同じ結果になる（既にある行は更新される）。
+-- 何度実行しても同じ結果になる（既にある行は更新され、catalog.ts から消した行は削除される）。
 -- universities ${universities.length}件 / 形式プリセット ${FORMAT_PRESETS.length}件 → exam_sets ${expected}件
+
+-- 一橋は科目を 'math' から 'math-bunkei' に移した。消して入れ直すと解いた履歴まで消えるので、
+-- 行はそのまま科目だけ書き換える
+update exam_sets set subject = 'math-bunkei', subject_label = '数学（文系）'
+ where university_id = 'hitotsubashi' and subject = 'math';
 
 insert into universities (${uniCols.join(", ")}) values
 ${universities.map((r) => `  (${r.map((v) => lit(v)).join(", ")})`).join(",\n")}
@@ -89,6 +98,20 @@ on conflict (university_id, faculty, year, subject) do update set
   has_solution = excluded.has_solution,
   access_url = excluded.access_url,
   source_url = excluded.source_url;
+
+-- catalog.ts から消した大学・プリセットを消す。その過去問を引いた抽選と自己採点も一緒に消える
+delete from exam_sets e
+ where not exists (
+   select 1 from (values
+${presetKeys}
+   ) as p (university_id, faculty, subject)
+    where p.university_id = e.university_id
+      and p.faculty = e.faculty
+      and p.subject = e.subject
+ );
+
+delete from universities
+ where id not in (${universities.map((r) => lit(r[0])).join(", ")});
 
 -- 確認用。合計 ${expected} 件になっていれば成功
 select u.short_name, count(*) as sets

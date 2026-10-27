@@ -12,23 +12,23 @@
 
 export const UNIVERSITIES = [
   { id: "kyoto", name: "京都大学", shortName: "京大", defaultWeight: 10, sortOrder: 1 },
-  { id: "tokyo", name: "東京大学", shortName: "東大", defaultWeight: 4, sortOrder: 2 },
-  { id: "osaka", name: "大阪大学", shortName: "阪大", defaultWeight: 4, sortOrder: 3 },
-  { id: "science-tokyo", name: "東京科学大学（旧 東京工業大学）", shortName: "科学大", defaultWeight: 4, sortOrder: 4 },
-  { id: "tohoku", name: "東北大学", shortName: "東北大", defaultWeight: 2, sortOrder: 5 },
-  { id: "nagoya", name: "名古屋大学", shortName: "名大", defaultWeight: 2, sortOrder: 6 },
-  { id: "kyushu", name: "九州大学", shortName: "九大", defaultWeight: 2, sortOrder: 7 },
-  { id: "hokkaido", name: "北海道大学", shortName: "北大", defaultWeight: 2, sortOrder: 8 },
-  { id: "kobe", name: "神戸大学", shortName: "神大", defaultWeight: 2, sortOrder: 9 },
-  { id: "hitotsubashi", name: "一橋大学", shortName: "一橋", defaultWeight: 1, sortOrder: 10 },
-  { id: "waseda", name: "早稲田大学", shortName: "早大", defaultWeight: 1, sortOrder: 11 },
-  { id: "keio", name: "慶應義塾大学", shortName: "慶大", defaultWeight: 1, sortOrder: 12 },
+  { id: "osaka", name: "大阪大学", shortName: "阪大", defaultWeight: 4, sortOrder: 2 },
+  { id: "science-tokyo", name: "東京科学大学（旧 東京工業大学）", shortName: "科学大", defaultWeight: 4, sortOrder: 3 },
+  { id: "tohoku", name: "東北大学", shortName: "東北大", defaultWeight: 2, sortOrder: 4 },
+  { id: "nagoya", name: "名古屋大学", shortName: "名大", defaultWeight: 2, sortOrder: 5 },
+  { id: "kyushu", name: "九州大学", shortName: "九大", defaultWeight: 2, sortOrder: 6 },
+  { id: "hokkaido", name: "北海道大学", shortName: "北大", defaultWeight: 2, sortOrder: 7 },
+  { id: "kobe", name: "神戸大学", shortName: "神大", defaultWeight: 2, sortOrder: 8 },
+  { id: "hitotsubashi", name: "一橋大学", shortName: "一橋", defaultWeight: 1, sortOrder: 9 },
+  { id: "waseda", name: "早稲田大学", shortName: "早大", defaultWeight: 1, sortOrder: 10 },
+  { id: "keio", name: "慶應義塾大学", shortName: "慶大", defaultWeight: 1, sortOrder: 11 },
 ] as const;
 
 export type UniversityId = (typeof UNIVERSITIES)[number]["id"];
 
 export const SUBJECTS = [
   { id: "math", label: "数学（理系）" },
+  { id: "math-bunkei", label: "数学（文系）" },
   { id: "physics", label: "物理" },
   { id: "chemistry", label: "化学" },
   { id: "english", label: "英語" },
@@ -68,7 +68,6 @@ export type FormatPreset = {
 
 const TOSHIN = "https://www.toshin-kakomon.com/";
 const KYODAI_OFFICIAL = "https://www.kyoto-u.ac.jp/ja/admissions/undergrad/past-eq";
-const TODAI_OFFICIAL = "https://www.u-tokyo.ac.jp/ja/admissions/undergraduate/e01_07_25.html";
 
 export const FORMAT_PRESETS: FormatPreset[] = [
   // ---- 京都大学 工学部（本命。公式資料と照合済み） ----
@@ -130,22 +129,7 @@ export const FORMAT_PRESETS: FormatPreset[] = [
     note: "化学は〔1〕〜〔4〕の4題。理科180分の半分90分を目安に計測する",
   },
 
-  // ---- 他大学（数学のみ。二次情報可。気づいたズレはその都度直す） ----
-  {
-    universityId: "tokyo",
-    faculty: "理科",
-    subject: "math",
-    subjectLabel: "数学（理系）",
-    yearFrom: YEAR_MIN,
-    yearTo: YEAR_MAX,
-    durationMin: 150,
-    questionCount: 6,
-    totalPoints: 120,
-    sourceUrl: "https://www2.sundai.ac.jp/sokuhou/assets/pdf/tky1_suu2_2.pdf",
-    accessUrl: TODAI_OFFICIAL,
-    hasSolution: false,
-    note: "駿台の入試問題分析シートで試験時間150分。理科各類の数学は120点満点・6題",
-  },
+  // ---- 他大学 理系数学（二次情報可。気づいたズレはその都度直す） ----
   {
     universityId: "osaka",
     faculty: "理・工・基礎工",
@@ -240,10 +224,97 @@ export const FORMAT_PRESETS: FormatPreset[] = [
     hasSolution: false,
     note: "理系は120分・5題で全問記述。各大問30点が明示されているので満点150点",
   },
+  // ---- 旧帝大 文系数学（科目「数学（文系）」。理系数学とは別に入れ外しできる） ----
+  {
+    universityId: "kyoto",
+    faculty: "文系",
+    subject: "math-bunkei",
+    subjectLabel: "数学（文系）",
+    yearFrom: YEAR_MIN,
+    yearTo: YEAR_MAX,
+    durationMin: 120,
+    questionCount: 5,
+    totalPoints: 150,
+    sourceUrl: "https://ja.wikibooks.org/wiki/%E4%BA%AC%E5%A4%A7%E5%AF%BE%E7%AD%96/%E6%95%B0%E5%AD%A6",
+    accessUrl: KYODAI_OFFICIAL,
+    hasSolution: false,
+    note: "120分・5題・150点（各大問30点か35点）",
+  },
+  {
+    universityId: "osaka",
+    faculty: "文系",
+    subject: "math-bunkei",
+    subjectLabel: "数学（文系）",
+    yearFrom: YEAR_MIN,
+    yearTo: YEAR_MAX,
+    durationMin: 90,
+    questionCount: 3,
+    sourceUrl: "https://jyuke-labo.com/daigakujyukentaisaku/osakadaigaku/suugaku/",
+    accessUrl: TOSHIN,
+    hasSolution: false,
+    note: "90分・3題。ほぼ毎年証明問題が出る。換算配点は学部ごとに違うので満点は入れない",
+  },
+  {
+    universityId: "tohoku",
+    faculty: "文系",
+    subject: "math-bunkei",
+    subjectLabel: "数学（文系）",
+    yearFrom: YEAR_MIN,
+    yearTo: YEAR_MAX,
+    durationMin: 100,
+    questionCount: 4,
+    sourceUrl: "https://jyuke-labo.com/daigakujyukentaisaku/touhokudaigaku/suugaku/",
+    accessUrl: TOSHIN,
+    hasSolution: false,
+    note: "100分・4題で全問記述",
+  },
+  {
+    universityId: "nagoya",
+    faculty: "文系",
+    subject: "math-bunkei",
+    subjectLabel: "数学（文系）",
+    yearFrom: YEAR_MIN,
+    yearTo: YEAR_MAX,
+    durationMin: 90,
+    questionCount: 3,
+    sourceUrl: "https://jyuke-labo.com/daigakujyukentaisaku/nagoyadaigaku/suugaku/",
+    accessUrl: TOSHIN,
+    hasSolution: false,
+    note: "90分・3題。1題30分が目安",
+  },
+  {
+    universityId: "kyushu",
+    faculty: "文系",
+    subject: "math-bunkei",
+    subjectLabel: "数学（文系）",
+    yearFrom: YEAR_MIN,
+    yearTo: YEAR_MAX,
+    durationMin: 120,
+    questionCount: 4,
+    totalPoints: 200,
+    sourceUrl: "https://jyuke-labo.com/daigakujyukentaisaku/kyushudaigaku/suugaku/",
+    accessUrl: TOSHIN,
+    hasSolution: false,
+    note: "120分・4題で全問記述。各大問50点なので満点200点",
+  },
+  {
+    universityId: "hokkaido",
+    faculty: "文系",
+    subject: "math-bunkei",
+    subjectLabel: "数学（文系）",
+    yearFrom: YEAR_MIN,
+    yearTo: YEAR_MAX,
+    durationMin: 90,
+    questionCount: 4,
+    sourceUrl: "https://jyuke-labo.com/daigakujyukentaisaku/hokkaidodaigaku/suugaku/",
+    accessUrl: TOSHIN,
+    hasSolution: false,
+    note: "90分・4題で全問記述。微積分がほぼ毎年出る",
+  },
   {
     universityId: "hitotsubashi",
     faculty: "文系",
-    subject: "math",
+    subject: "math-bunkei",
     subjectLabel: "数学（文系）",
     yearFrom: YEAR_MIN,
     yearTo: YEAR_MAX,
@@ -254,6 +325,8 @@ export const FORMAT_PRESETS: FormatPreset[] = [
     hasSolution: false,
     note: "前期120分・5題。配点は学部ごとに違う（社会130〜SDS330）ので満点は入れない。整数と確率が頻出で、理系の演習にも使える",
   },
+
+  // ---- 私大 理工系 ----
   {
     universityId: "waseda",
     faculty: "基幹理工学部",
