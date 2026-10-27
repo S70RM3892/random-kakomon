@@ -26,8 +26,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
-      # 「already exists, skipping」の NOTICE でログが埋まらないように
-      PGOPTIONS: -c client_min_messages=warning
     steps:
       - uses: actions/checkout@v4
 
