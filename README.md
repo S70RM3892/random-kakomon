@@ -47,6 +47,13 @@
 `npm run gen:seed`（seed を作り直す場合）と `sh scripts/gen-setup-sql.sh` を流す。
 問題データを足したら `npm run gen:seed` で作り直して、SQL Editor に貼り直す。
 
+SQL Editor に貼る代わりに GitHub Actions で流すこともできる。
+Supabase の **Connect > Session pooler** の接続文字列（パスワード入り）を
+Settings > Secrets and variables > Actions > Secrets に `SUPABASE_DB_URL` として入れると、
+main の `supabase/setup.sql` が変わるたびに `.github/workflows/db-setup.yml` が流して件数を確かめる
+（Actions の画面から Run workflow で手動でも走る）。Direct connection は IPv6 専用で
+GitHub の runner から繋がらないので、必ず Session pooler のほうを使う。
+
 ローカルに Node がある場合は、SQL Editor の代わりに `npm run seed` でも入れられる。
 そちらは `SUPABASE_SERVICE_ROLE_KEY`（`sb_secret_...`）が要る。
 

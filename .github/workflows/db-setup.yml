@@ -1,0 +1,69 @@
+name: Apply supabase/setup.sql
+
+# supabase/setup.sql を Supabase の DB に流して、件数を確かめる。
+# SQL Editor に手で貼る代わり。setup.sql は冪等なので何度走ってもいい。
+#
+# 要るもの: Settings > Secrets and variables > Actions > Secrets に SUPABASE_DB_URL。
+# Supabase の Connect ダイアログ > Session pooler の接続文字列（パスワード入り）を入れる。
+# Direct connection は IPv6 専用で、GitHub の runner からは繋がらない。
+
+on:
+  push:
+    branches: [main]
+    paths: [supabase/setup.sql]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 2本同時に流すと delete と insert が噛み合わないので1本ずつ
+concurrency:
+  group: db-setup
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check secret
+        id: secret
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::warning::SUPABASE_DB_URL が未設定なので setup.sql は流していない。Secrets に入れてこのワークフローを Run workflow する。"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply setup.sql
+        if: steps.secret.outputs.ok == 'true'
+        # 1トランザクションで流す。途中で落ちたら全部巻き戻る
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -q -f supabase/setup.sql
+
+      - name: Verify counts
+        if: steps.secret.outputs.ok == 'true'
+        run: |
+          # 期待値は seed.sql の「universities 11件 / ... → exam_sets 420件」の行から取る
+          line=$(grep -m1 -- '-- universities .*exam_sets' supabase/seed.sql)
+          want_univ=$(echo "$line" | sed -E 's/.*universities ([0-9]+)件.*/\1/')
+          want_sets=$(echo "$line" | sed -E 's/.*exam_sets ([0-9]+)件.*/\1/')
+
+          {
+            echo "### 大学ごとの過去問セット数"
+            echo '```'
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "select u.short_name, count(*) from exam_sets e join universities u on u.id = e.university_id group by u.short_name, u.sort_order order by u.sort_order;"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          set -- $(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -At -F ' ' -c "select (select count(*) from universities), (select count(*) from exam_sets);")
+          got_univ=$1
+          got_sets=$2
+          echo "universities: $got_univ (期待 $want_univ) / exam_sets: $got_sets (期待 $want_sets)"
+          if [ "$got_univ" != "$want_univ" ] || [ "$got_sets" != "$want_sets" ]; then
+            echo "::error::件数が seed.sql と合わない"
+            exit 1
+          fi
